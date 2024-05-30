@@ -1,0 +1,82 @@
+<html>
+
+<body>
+    <style>
+        #outgoing {
+            width: 600px;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+    </style>
+    <form>
+        <textarea id="incoming"></textarea>
+        <button type="submit">submit</button>
+        <input type="file" id="trigger">
+    </form>
+    <pre id="outgoing"></pre>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script>
+
+        var conn
+        var p = new Peer()
+        const log = console.log
+        const initiator = location.hash === '#1'
+        p.on('open', id => log(id))
+        p.on('close', () => log('close'))
+        p.on('error', err => log(err))
+        p.on('connection', c => {
+            c.on('data', data => {
+                log(`${data} 来自 ${c.peer}`);
+                c.send(`您的请求已处理`)
+            })
+            c.on('open', () => log(`from ${c.peer} is open`))
+            c.on('close', () => log(`from${c.peer} is close`))
+            c.on('error', err => log(err))
+        })
+
+        if (!initiator) {
+            document.querySelector('form').addEventListener('submit', ev => {
+                ev.preventDefault()
+                if (conn) {
+                    conn.send(document.querySelector('#incoming').value)
+                }
+                else {
+                    conn = p.connect(document.querySelector('#incoming').value)
+                    conn.on('data', data => {
+                        log(`from ${conn.peer}: ${data}`)
+                    })
+                    conn.on('open', () => log('open'))
+                    conn.on('close', () => log('close'))
+                    conn.on('error', err => log(err))
+                }
+            })
+            document.querySelector('input[type=file]').addEventListener('change',
+                event => {
+                    log('hahahah')
+                    let file = event.target.files[0];
+                    let file_reader = new FileReader();
+                    file_reader.onload = () => {
+                        let fc = file_reader.result;
+                        conn.send(fc)
+                        log('已发送到服务器')
+                    };
+                    // file_reader.readAsText(file, 'UTF-8');
+                    file_reader.readAsArrayBuffer(file)
+                })
+        }
+
+        // var peers = 0
+        // setInterval(function () {
+        //     var peer = new Peer()
+        //     peer.on('open', () => {
+        //         var cc = peer.connect('f465cb17-dad0-4707-869f-a4287403cc09')
+        //         // cc.on('open', () => {
+        //             peers = peers + 1
+        //             log(peers)
+        //         // })
+        //     })
+        // }, 3000);
+    </script>
+</body>
+
+</html>
